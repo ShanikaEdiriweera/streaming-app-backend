@@ -34,7 +34,8 @@ module.exports = {
             name: req_JSON_user.name,  
             contact: req_JSON_user.contact,  
             email: req_JSON_user.email,  
-            userType: req_JSON_user.userType
+            userType: req_JSON_user.userType,
+            isActive: false
         });
 
         user.save()
@@ -44,10 +45,11 @@ module.exports = {
                 username : data.username,
                 email : data.email,
                 contact : data.contact,
-                userType : data.userType
+                userType : data.userType,
+                isActive: data.isActive
             });
         }).catch(err => {
-            winston.error("error: ", err)
+            winston.error("error: ", err);
             res.status(500).send({
                 message: err.message || "There was a problem registering the user."
             });
@@ -91,6 +93,13 @@ module.exports = {
         
         const user = await User.findOne({ username });
         if(!user) return res.status(404).send({ message: "User not found." });
+
+        if(!user.isActive) return res.status(401).send({ 
+            auth: false, 
+            token: null,
+            message: 'User not activated.'
+        });
+
         const isCorrectPassword = bcrypt.compareSync(password, user.password);
         if(!isCorrectPassword) return res.status(401).send({ 
             auth: false, 
@@ -99,10 +108,12 @@ module.exports = {
         });
 
         const jwtPayload = {
-            name : user.name,
-            username : user.username,
-            email : user.email,
-            contact : user.contact,
+            name: user.name,
+            username: user.username,
+            email: user.email,
+            contact: user.contact,
+            userType: user.userType,
+            isActive: user.isActive, 
             isAdmin: user.userType === 'admin'
         };
 
@@ -113,6 +124,35 @@ module.exports = {
             auth: true, 
             isAdmin: user.userType === 'admin',
             token: jwtToken
+        });
+    },
+
+    activateUser : async (req, res, next) => {
+        const { username, isActive } = req.body;
+        if( !username || !isActive ) return res.status(400).send({ message: "'username' and 'isActive' Required." });
+
+        // Find User and update isActive
+        User.findOneAndUpdate({ username }, { isActive }, { new: true })
+        .then(user => {
+            if(!user) {
+                return res.status(404).send({
+                    message: "User not found with username: " + username
+                });
+            }
+            res.send(user);
+        }).catch(err => {
+            winston.error("error: ", err);
+
+            if(err.kind === 'ObjectId') {
+                return res.status(404).send({
+                    message: "User not found with username: " + username,
+                    error: err
+                });                
+            }
+            return res.status(500).send({
+                message: "Error activating/deactivating User with username: " + username,
+                error: err
+            });
         });
     },
 }

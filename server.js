@@ -6,7 +6,7 @@ import cors from 'cors';
 // import fileUpload from 'express-fileupload';
 
 import router from './routes';
-import {authenticateToken} from './app/controllers/AuthController'
+import { authenticateToken, authenticateAdmin } from './app/controllers/AuthController'
 import winston from './config/winston';
 import dbConfig from './config/database.config';
 
@@ -51,7 +51,7 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms', 
 // Routes and related middleware
 app.use('/public', router.public);
 app.use('/protected', authenticateToken, router.protected);
-// app.use('/admin', authenticateToken, authenticateAdmin, router.admin);
+app.use('/admin', authenticateToken, authenticateAdmin, router.admin);
 
 // define a simple route
 app.get('/', (req, res) => {

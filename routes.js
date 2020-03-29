@@ -1,17 +1,35 @@
 import express from 'express';
 
 import students from './app/controllers/student.controller';
+import users from './app/controllers/user.controller';
 import attendance from './app/controllers/attendance.controller';
 import AuthController from './app/controllers/AuthController';
 
 const publicRoutes = express.Router();
 const authenticatedRoutes = express.Router();
-// var adminRoutes = express.Router();
+var adminRoutes = express.Router();
 
 // Public Routes 
 // =============
 publicRoutes.post('/register', AuthController.registerUser);
 publicRoutes.post('/login', AuthController.loginUser);
+
+// Admin Routes 
+// ============
+/**
+ * Activate/Deactivate User accounts
+ */
+adminRoutes.post('/activateUser', AuthController.activateUser);
+/**
+ * Retrieve all Users
+ */
+adminRoutes.get('/users', users.findAll);
+
+// Authenticated Routes
+// ====================
+
+
+//=======================BELOW APIS ARE NOT RELEVANT=================================
 
 /**
  * Verify pin number with student indexNo
@@ -118,21 +136,14 @@ authenticatedRoutes.get('/attendance', attendance.findAll);
 // authenticatedRoutes.delete('/attendance/:id', attendance.delete);
 
 /**
- * Create a multiple Attendance records
- */
-authenticatedRoutes.post('/attendance/multiple', attendance.createMultiple);
-
-/**
  * Get Attendance report - student count of school, grade, class 
  * Query param 'date: Date' can be given
  */
 authenticatedRoutes.get('/attendance/report', attendance.getReport);
 
-// Admin Routes
-// ============
 
 module.exports = {
     public: publicRoutes,
     protected: authenticatedRoutes,
-    // admin: adminRoutes,
+    admin: adminRoutes,
 };
