@@ -3,7 +3,6 @@ import _ from 'lodash';
 import Student from '../models/student.model';
 import Attendance from '../models/attendance.model';
 import HttpUtil from '../util/httpUtil';
-import { IDEAMART_SERVER } from '../constants';
 import winston from '../../config/winston';
 
 /**
@@ -100,102 +99,6 @@ module.exports = {
                 });
             });
         }
-    },
-
-    /**
-     * Create and Save a multiple Attendance records
-     * Send requests to ideamart server
-     */
-    createMultiple: async (req, res) => {
-        const req_JSON = req.body;
-
-        // Validate request
-        if( !req_JSON || 
-            !req_JSON.records ||
-            req_JSON.records.length === 0 ) {
-
-            winston.warn("Req body validation fail: ", req_JSON)
-            return res.status(400).send({
-                message: "Required request data can not be empty"
-            });
-        }
-
-        const req_records = req_JSON.records;
-        let attendance_res = [];
-        let ideamartReqBodyArray = [];
-        // Validate attendance record objects
-        for (let [index, req_JSON_record] of req_records.entries()) {
-            if( !req_JSON_record.indexNo ||
-                !req_JSON_record.isEntered || 
-                !req_JSON_record.timestamp ) {
-
-                winston.warn("Attendance record validation fail: ", req_JSON_record)
-                return res.status(400).send({
-                    message: `Required Attendance details can not be empty on no. ${index} record`,
-                    recordWithError: req_JSON_record,
-                    indexWithError: index,
-                    savedRecords: attendance_res
-                });
-            }
-
-            // Find student record
-            const student = await Student.findOne({ indexNo: req_JSON_record.indexNo });
-            if( !student ) winston.error("Student not found: ", student)
-            
-            if( !student ) return res.status(400).send({ 
-                message: `Student not found for index no. - ${req_JSON_record.indexNo}`,
-                recordWithError: req_JSON_record,
-                indexWithError: index,
-                savedRecords: attendance_res 
-            });
-
-            try {
-                // Create an Attendance record
-                let record = new Attendance({
-                    student: student._id,     
-                    indexNo: req_JSON_record.indexNo,     
-                    date: req_JSON_record.date,     
-                    time: req_JSON_record.time,     
-                    timestamp: req_JSON_record.timestamp,
-                    isEntered: req_JSON_record.isEntered      
-                });
-
-                // Save Attendance record in the database
-                const savedRecord = await record.save();
-                attendance_res.push(savedRecord);
-                const updatedStudent = await Student.findByIdAndUpdate(student._id, {$push: {attendance: savedRecord._id}}, {new: true});
-                if(updatedStudent) winston.info("Student updated: ", updatedStudent.indexNo)
-
-                // let ideamartAttendanceUrl = `${IDEAMART_SERVER.ATTENDANCE_ENDPOINT}?indexNo=${updatedStudent.indexNo}&value=1&date=${req_JSON_record.date}&time=${req_JSON_record.time}`;
-                // const ideamartRes = await HttpUtil.postRequest(ideamartAttendanceUrl, {});
-                // winston.info("ideamartResponse", ideamartRes)
-                //TODO: check 'date' and 'time' set, if not get from time stamp
-                ideamartReqBodyArray.push({ indexNo: updatedStudent.indexNo, value: req_JSON_record.isEntered, date: req_JSON_record.date, time: req_JSON_record.time })
-            } catch (err) {
-                winston.error("Error", err.message)
-
-                return res.status(500).send({
-                    message: err.message || "Some error occurred while creating the Attendance record.",
-                    recordWithError: req_JSON_record,
-                    indexWithError: index,
-                    savedRecords: attendance_res,
-                    error: err.code
-                });
-            }
-        }
-
-        //TODO: check what should be done with value
-        let ideamartAttendanceMultipleUrl = IDEAMART_SERVER.ATTENDANCE_MULTIPLE_ENDPOINT;
-        winston.info("ideamart attendance multiple Req body: ", ideamartReqBodyArray);
-        const ideamartResponse = await HttpUtil.postRequest(ideamartAttendanceMultipleUrl, ideamartReqBodyArray);
-        winston.info("ideamart attendance multiple Response: ", ideamartResponse);
-
-        return res.send({
-            message: "SUCCESS",
-            noOfSavedRecords: attendance_res.length,
-            savedRecords: attendance_res,
-            ideamartResponse
-        });
     },
 
     /**

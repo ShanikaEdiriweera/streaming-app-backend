@@ -1,8 +1,7 @@
 import axios from 'axios';
-import { IDEAMART_SERVER } from '../constants';
 import winston from '../../config/winston';
 
-const BASE_URL = IDEAMART_SERVER.BASE_URL;
+const BASE_URL = ''; // get from config/constants
 
 // const config = {
 //   headers: {
