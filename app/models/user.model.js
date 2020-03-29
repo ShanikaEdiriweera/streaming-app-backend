@@ -14,10 +14,11 @@ const UserSchema = new mongoose.Schema({
     name: String,
     email: String,
     contact: String,
+    isActive: Boolean,
 
     userType: {
         type: String,
-        enum : ['user', 'admin'],
+        enum : ['student', 'lecturer', 'admin'],
     },
 }, {
     timestamps: true
